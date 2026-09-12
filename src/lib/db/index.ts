@@ -1,19 +1,40 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { DB_PATH } from '@/lib/config';
+import { dirname, resolve, isAbsolute } from 'node:path';
+import { DB_PATH, CATEGORIES } from '@/lib/config';
+import { seedIfEmpty } from './seed';
+import { SOURCE_CATALOG } from '@/lib/news/sources';
+import { DEMO_TEMPLATES } from '@/lib/news/demo';
+import { istDateKey } from '@/lib/utils/time';
 
 let _db: DatabaseSync | null = null;
 
-/** Singleton connection. Uses WAL for concurrent reads during writes. */
+/** Singleton connection. Uses WAL or DELETE journal mode with automatic Vercel /tmp path support. */
 export function db(): DatabaseSync {
   if (_db) return _db;
-  const path = resolve(process.cwd(), DB_PATH);
-  mkdirSync(dirname(path), { recursive: true });
+  const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  const targetPath = DB_PATH || (isVercel ? '/tmp/prism.db' : 'data/prism.db');
+  const path = isAbsolute(targetPath) ? targetPath : resolve(process.cwd(), targetPath);
+
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+  } catch {
+    // Read-only or directory already exists
+  }
+
   _db = new DatabaseSync(path);
-  _db.exec('PRAGMA journal_mode = WAL;');
+  try {
+    _db.exec('PRAGMA journal_mode = WAL;');
+  } catch {
+    try {
+      _db.exec('PRAGMA journal_mode = DELETE;');
+    } catch {
+      // Safe fallback
+    }
+  }
   _db.exec('PRAGMA foreign_keys = ON;');
   migrate(_db);
+  autoSeed(_db);
   return _db;
 }
 
@@ -289,3 +310,136 @@ export function parseArticleRow(row: Record<string, unknown>): import('@/lib/typ
     run_id: (row.run_id as string) ?? null,
   };
 }
+
+/** Automatically seeds categories, sources, facts, and initial sample articles if DB is fresh. */
+function autoSeed(d: DatabaseSync): void {
+  try {
+    // 1. Categories
+    const catCount = (d.prepare('SELECT COUNT(*) AS c FROM categories').get() as { c: number })?.c ?? 0;
+    if (catCount === 0) {
+      const insertCat = d.prepare(
+        `INSERT INTO categories (slug, label, short, description, parent, weight, icon)
+         VALUES (?,?,?,?,?,?,?)
+         ON CONFLICT(slug) DO UPDATE SET label=excluded.label, short=excluded.short, description=excluded.description`
+      );
+      for (const c of CATEGORIES) {
+        insertCat.run(c.slug, c.label, c.short, c.description, c.parent, c.weight, c.icon);
+      }
+    }
+
+    // 2. Sources
+    const srcCount = (d.prepare('SELECT COUNT(*) AS c FROM sources').get() as { c: number })?.c ?? 0;
+    if (srcCount === 0) {
+      const insSrc = d.prepare(
+        `INSERT INTO sources (name, url, kind, tier, categories) VALUES (?,?,?,?,?)
+         ON CONFLICT(name) DO UPDATE SET url=excluded.url, tier=excluded.tier, categories=excluded.categories`
+      );
+      for (const s of SOURCE_CATALOG) {
+        insSrc.run(s.name, s.url, s.kind, s.tier, JSON.stringify(s.categories));
+      }
+    }
+
+    // 3. Facts
+    seedIfEmpty();
+
+    // 4. Rotate daily facts
+    rotateDailyFacts(d);
+
+    // 5. Initial Articles
+    const artCount = (d.prepare('SELECT COUNT(*) AS c FROM articles').get() as { c: number })?.c ?? 0;
+    if (artCount === 0) {
+      seedInitialArticles(d);
+    }
+  } catch (err) {
+    console.error('Auto-seed error:', err);
+  }
+}
+
+function rotateDailyFacts(d: DatabaseSync): void {
+  try {
+    const today = istDateKey();
+    const existing = d.prepare('SELECT COUNT(*) AS c FROM facts WHERE date = ?').get(today) as { c: number };
+    if (existing && existing.c > 0) return;
+
+    const dayIndex = Math.floor(Date.now() / 86_400_000);
+    for (const kind of ['fact', 'fun', 'learning', 'tool']) {
+      const rows = d.prepare(`SELECT id FROM facts WHERE kind = ? AND (date IS NULL OR date != ?) ORDER BY id`).all(kind, today) as { id: string }[];
+      if (!rows.length) continue;
+      const n = kind === 'learning' ? 5 : 1;
+      for (let i = 0; i < Math.min(n, rows.length); i++) {
+        const id = rows[(dayIndex + i) % rows.length].id;
+        d.prepare('UPDATE facts SET date = ? WHERE id = ?').run(today, id);
+      }
+    }
+  } catch {}
+}
+
+function seedInitialArticles(d: DatabaseSync): void {
+  try {
+    const insert = d.prepare(`
+      INSERT INTO articles (
+        id, title, quick_summary, summary, why_it_matters, india_angle,
+        key_facts, importance, priority, exam_relevance, gs_paper,
+        category, source_name, source_url, source_tier, confidence,
+        ai_processed, is_demo, published_at, fetched_at, created_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, datetime('now')
+      )
+      ON CONFLICT(id) DO NOTHING
+    `);
+
+    const gsMap: Record<string, string> = {
+      economy: 'GS-III',
+      government: 'GS-II',
+      science: 'GS-III',
+      world: 'GS-II',
+      ap: 'APPSC',
+      vizag: 'APPSC',
+      ai: 'GS-III',
+      defence: 'GS-III',
+      environment: 'GS-III',
+      politics: 'GS-II',
+      jobs: 'UPSC / APPSC',
+      india: 'GS-II',
+    };
+
+    const now = new Date();
+    DEMO_TEMPLATES.forEach((t, i) => {
+      const id = `art_demo_${i + 1}`;
+      const pubTime = new Date(now.getTime() - i * 3600_000).toISOString();
+      const gs = gsMap[t.category] || 'GS-II';
+      insert.run(
+        id,
+        t.title,
+        t.description.slice(0, 160),
+        t.description,
+        `Direct impact on ${t.category} governance and syllabus relevance for ${gs}.`,
+        `Key development relevant for competitive examinations in India.`,
+        JSON.stringify([t.title.replace(/^Sample briefing — /, ''), `Source: ${t.sourceName}`]),
+        75,
+        i < 4 ? 'HIGH' : 'MEDIUM',
+        `${gs} — Current Affairs & Mains analytical anchor`,
+        gs,
+        t.category,
+        t.sourceName,
+        t.sourceUrl,
+        t.sourceTier,
+        'source-verified',
+        1,
+        1,
+        pubTime,
+        pubTime
+      );
+    });
+
+    try {
+      d.exec(`INSERT INTO articles_fts(articles_fts) VALUES('rebuild')`);
+    } catch {}
+  } catch (err) {
+    console.error('Error seeding initial articles:', err);
+  }
+}
+

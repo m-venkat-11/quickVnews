@@ -22,8 +22,10 @@ export const UPDATE_INTERVAL_HOURS = 6;
 /** Canonical IST run slots (00:00 / 06:00 / 12:00 / 18:00). */
 export const UPDATE_SLOTS_IST = ['00:00', '06:00', '12:00', '18:00'];
 
-/** DB lives beside the app; overridable for deployments with a data volume. */
-export const DB_PATH = process.env.PRISM_DB_PATH || 'data/prism.db';
+/** DB lives beside the app; overridable for deployments with a data volume. Uses /tmp on serverless/Vercel. */
+export const DB_PATH =
+  process.env.PRISM_DB_PATH ||
+  (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? '/tmp/prism.db' : 'data/prism.db');
 
 /** AI summarization (optional). Falls back to deterministic local processing. */
 export const AI = {
