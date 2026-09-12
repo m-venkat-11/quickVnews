@@ -3,14 +3,15 @@ import { CRON_SECRET } from '@/lib/config';
 import { isAdminRequest } from '@/lib/admin';
 import { runIngestion } from '@/lib/news/ingest';
 
-/** Status ping or Vercel Cron trigger (GET). */
+/** Status ping or Cron trigger (GET). */
 export async function GET(req: Request) {
   const secret = CRON_SECRET;
   const auth = req.headers.get('authorization') ?? '';
-  const authorized = secret && auth === `Bearer ${secret}`;
+  const isVercelCron = req.headers.get('x-vercel-cron') === '1';
+  const authorized = !secret || isVercelCron || (secret && auth === `Bearer ${secret}`);
 
   if (!authorized) {
-    return NextResponse.json({ ok: true, status: 'ready', hint: 'Send Authorization: Bearer $CRON_SECRET to trigger an update cycle.' });
+    return NextResponse.json({ error: 'Unauthorized. Set CRON_SECRET and pass it as a Bearer token.' }, { status: 401 });
   }
 
   const mode = new URL(req.url).searchParams.get('mode') === 'demo' ? 'demo' : 'live';
