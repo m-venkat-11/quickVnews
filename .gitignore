@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+*.log
+.env
+.env*.local
+data/prism.db
+data/prism.db-journal
+data/prism.db-wal
+data/prism.db-shm
+data/*.json.state
+.DS_Store
+*.tsbuildinfo
