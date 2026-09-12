@@ -23,8 +23,8 @@ export interface IngestResult {
   notes: string | null;
 }
 
-const MAX_PER_SOURCE = 12;
-const MAX_LIVE_ITEMS = 60;
+const MAX_PER_SOURCE = 30;
+const MAX_LIVE_ITEMS = 250;
 
 /** Stable cycle index per 6-hour IST slot, so demo cycles rotate deterministically. */
 function slotCycleIndex(slotKey: string): number {

@@ -21,12 +21,19 @@ export const SOURCE_CATALOG: SourceCatalogEntry[] = [
 
   // ---- Reputable national (tier 2) ----
   { id: 'thehindu-national', name: 'The Hindu — National', url: 'https://www.thehindu.com/news/national/feeder/default.rss', kind: 'rss', tier: 2, categories: ['india', 'politics'] },
+  { id: 'thehindu-editorial', name: 'The Hindu — Editorial', url: 'https://www.thehindu.com/opinion/editorial/feeder/default.rss', kind: 'rss', tier: 1, categories: ['india', 'politics', 'government', 'world'] },
   { id: 'thehindu-ap', name: 'The Hindu — Andhra Pradesh', url: 'https://www.thehindu.com/news/national/andhra-pradesh/feeder/default.rss', kind: 'rss', tier: 2, categories: ['ap', 'vizag'] },
   { id: 'thehindu-world', name: 'The Hindu — World', url: 'https://www.thehindu.com/news/international/feeder/default.rss', kind: 'rss', tier: 2, categories: ['world'] },
   { id: 'thehindu-business', name: 'The Hindu — Business', url: 'https://www.thehindu.com/business/Economy/feeder/default.rss', kind: 'rss', tier: 2, categories: ['economy'] },
   { id: 'thehindu-sci', name: 'The Hindu — Science & Tech', url: 'https://www.thehindu.com/sci-tech/feeder/default.rss', kind: 'rss', tier: 2, categories: ['science'] },
   { id: 'thehindu-env', name: 'The Hindu — Environment', url: 'https://www.thehindu.com/sci-tech/energy-and-environment/feeder/default.rss', kind: 'rss', tier: 2, categories: ['environment'] },
   { id: 'indianexpress', name: 'Indian Express — India', url: 'https://indianexpress.com/section/india/feed/', kind: 'rss', tier: 2, categories: ['india', 'politics'] },
+  { id: 'toi-top', name: 'Times of India — Top Stories', url: 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms', kind: 'rss', tier: 2, categories: ['india', 'politics', 'government'] },
+  { id: 'toi-world', name: 'Times of India — World', url: 'https://timesofindia.indiatimes.com/rssfeeds/296589292.cms', kind: 'rss', tier: 2, categories: ['world'] },
+  { id: 'ht-india', name: 'Hindustan Times — India', url: 'https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml', kind: 'rss', tier: 2, categories: ['india', 'government'] },
+  { id: 'livemint-econ', name: 'Livemint — Economy', url: 'https://www.livemint.com/rss/news', kind: 'rss', tier: 2, categories: ['economy', 'government'] },
+  { id: 'livemint-tech', name: 'Livemint — Technology', url: 'https://www.livemint.com/rss/technology', kind: 'rss', tier: 2, categories: ['ai', 'science'] },
+  { id: 'ndtv-top', name: 'NDTV — Top Stories', url: 'https://feeds.feedburner.com/ndtvnews-top-stories', kind: 'rss', tier: 2, categories: ['india', 'politics'] },
   { id: 'hindubusinessline-econ', name: 'Business Standard — Economy', url: 'https://www.business-standard.com/rss/economy-102.rss', kind: 'rss', tier: 2, categories: ['economy'] },
 
   // ---- International (tier 2) ----
@@ -35,14 +42,13 @@ export const SOURCE_CATALOG: SourceCatalogEntry[] = [
   { id: 'dw-world', name: 'Deutsche Welle', url: 'https://rss.dw.com/rdf/rss-en-world', kind: 'rss', tier: 2, categories: ['world'] },
 
   // ---- AI & technology (tier 2/3) ----
-  { id: 'venturebeat-ai', name: 'VentureBeat AI', url: 'https://venturebeat.com/category/ai/feed/', kind: 'rss', tier: 3, categories: ['ai'] },
   { id: 'techcrunch', name: 'TechCrunch', url: 'https://techcrunch.com/feed/', kind: 'rss', tier: 3, categories: ['ai', 'science'] },
 
   // ---- Defence (tier 3) ----
   { id: 'idrw', name: 'IDRW — Defence Research', url: 'https://idrw.org/feed/', kind: 'rss', tier: 3, categories: ['defence'] },
 
   // ---- Environment (tier 2) ----
-  { id: 'dte', name: 'Down To Earth', url: 'https://www.downtoearth.org.in/rss.xml', kind: 'rss', tier: 2, categories: ['environment'] },
+  { id: 'dte', name: 'Down To Earth', url: 'https://www.downtoearth.org.in/rss', kind: 'rss', tier: 2, categories: ['environment'] },
 
   // ---- AP local (tier 2/3) ----
   { id: 'andhrajyothy-vzg', name: 'Andhra Jyothy — Visakhapatnam', url: 'https://www.andhrajyothy.com/rss/visakhapatnam', kind: 'rss', tier: 3, categories: ['vizag'] },

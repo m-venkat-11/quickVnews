@@ -349,6 +349,12 @@ function autoSeed(d: DatabaseSync): void {
     const artCount = (d.prepare('SELECT COUNT(*) AS c FROM articles').get() as { c: number })?.c ?? 0;
     if (artCount === 0) {
       seedInitialArticles(d);
+      // Trigger background live ingest from all sources
+      setTimeout(() => {
+        import('@/lib/news/ingest')
+          .then(({ runIngestion }) => runIngestion('live'))
+          .catch(() => {});
+      }, 100);
     }
   } catch (err) {
     console.error('Auto-seed error:', err);
